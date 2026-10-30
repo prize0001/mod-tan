@@ -22,12 +22,14 @@ Guild commands usually update quickly and are visible only in the configured ser
 
 ## Commands
 
+- `=bumpsadd <user ID> <number>` manually adds bump totals in the current server. Only user `749008764300165192` can use it.
 - Reply with `=bump` to log your bump. Use `=bumps` to view your own weekly, monthly, and all-time totals in the current server, or `=bumps <user ID>` to look up someone else in that server. Bump counts persist across restarts; weeks run Sunday through Saturday (UTC). Bump totals and ranks are tracked separately per server.
+- `=warnsad <user ID> <number>` manually adds ad-deletion counts used by `=lb`. Only user `749008764300165192` can use it.
 - Successful ad deletions through the `=ad <reason>` warning command and the Ad Warning message action are counted for the moderator. Use `=lb <user ID>` to look up combined weekly, monthly, and all-time deletion stats and weekly rank across servers. Weekly counts roll over Monday (UTC); totals persist across restarts.
 - In server `852771975730298880`, ad deletion (`=ad` or the Ad Warning action) and `=bump` require role `852778233275613235`. In server `771235990664118272`, they require role `771747709170352139`.
 - `/autoad create`, `/autoad list`, and `/autoad remove` require role `1115815957802258434`.
 - `/help` shows available bot commands.
-- `/ping` checks that the bot is responding.
+- `=ping` or `/ping` checks that the bot is responding.
 - `/autoad create description channels duration` posts an ad immediately and every 3 hours until its duration ends (for example `7d` or `30 days`). Use comma-separated `#channel` names or channel mentions. `/autoad list` shows active ads; `/autoad remove id` stops one and deletes its posts. Administrator permission is required. On expiry, the bot removes the ad messages and DMs user `749008764300165192` with the ended ad text.
 - `/kick user reason` removes a server member. `user` accepts a raw user ID or mention.
 - `/ban user reason` bans a user and deletes their messages from the previous 7 days; `user` accepts a raw user ID or mention, even if they are not in the server.
@@ -41,7 +43,7 @@ Guild commands usually update quickly and are visible only in the configured ser
 - `/warn user reason` sends a warning embed by DM and creates a moderation case. `user` accepts a raw user ID or mention; the target must be in the server.
 - `/clear amount user` deletes 1-100 recent messages; the optional `user` filter accepts a raw user ID or mention. Discord does not allow bulk deletion of messages older than 14 days.
 - Right-click a message, open **Apps**, and choose **Ad Warning** to issue a warning through a reason modal.
-- `/adlookup code` publicly posts a saved advertisement warning by its six-character code. `/adwarningremove code` removes a saved warning by code. Both require Manage Messages.
+- `/adlookup code` publicly posts a saved advertisement warning by its six-character code. `=adwarningremove <code>` or `/adwarningremove <code>` removes a saved warning by code. Both removal commands require Manage Messages.
 - `=adwarns @user` or `/adwarns user:@user` lists that user's saved warning codes and reasons in the current server. Requires Manage Messages.
 - Reply to a message with `=ad <reason>` to delete it and issue an advertisement warning. The bot deletes the moderator's command message and sends no confirmation in that channel. The warning embed is still sent to both configured warning channels. The command requires Manage Messages.
 
