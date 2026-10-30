@@ -66,12 +66,16 @@ function getUser(data, userId) {
 }
 
 export function recordAdDeletion(moderatorId) {
+  return addAdDeletions(moderatorId, 1);
+}
+
+export function addAdDeletions(moderatorId, count) {
   return serializeUpdate((data) => {
     const periods = getPeriodKeys();
     const user = getUser(data, moderatorId);
-    user.allTime = (user.allTime ?? 0) + 1;
-    user.weeks[periods.thisWeek] = (user.weeks[periods.thisWeek] ?? 0) + 1;
-    user.months[periods.month] = (user.months[periods.month] ?? 0) + 1;
+    user.allTime = (user.allTime ?? 0) + count;
+    user.weeks[periods.thisWeek] = (user.weeks[periods.thisWeek] ?? 0) + count;
+    user.months[periods.month] = (user.months[periods.month] ?? 0) + count;
 
     for (const week of Object.keys(user.weeks)) {
       if (week !== periods.thisWeek && week !== periods.lastWeek) delete user.weeks[week];
@@ -80,7 +84,10 @@ export function recordAdDeletion(moderatorId) {
       if (month !== periods.month) delete user.months[month];
     }
 
-    return user.weeks[periods.thisWeek];
+    return {
+      thisWeek: user.weeks[periods.thisWeek],
+      allTime: user.allTime,
+    };
   });
 }
 
