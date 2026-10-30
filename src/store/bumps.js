@@ -90,12 +90,16 @@ function getUser(data, userId, guildId) {
 }
 
 export function recordBump(userId, guildId) {
+  return addBumps(userId, guildId, 1);
+}
+
+export function addBumps(userId, guildId, count) {
   return serializeUpdate((data) => {
     const periods = getPeriodKeys();
     const user = getUser(data, userId, guildId);
-    user.allTime = (user.allTime ?? 0) + 1;
-    user.weeks[periods.thisWeek] = (user.weeks[periods.thisWeek] ?? 0) + 1;
-    user.months[periods.month] = (user.months[periods.month] ?? 0) + 1;
+    user.allTime = (user.allTime ?? 0) + count;
+    user.weeks[periods.thisWeek] = (user.weeks[periods.thisWeek] ?? 0) + count;
+    user.months[periods.month] = (user.months[periods.month] ?? 0) + count;
 
     for (const week of Object.keys(user.weeks)) {
       if (week !== periods.thisWeek && week !== periods.lastWeek) delete user.weeks[week];
