@@ -1,5 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
-import { getAdDeletionStats } from '../store/ad-deletions.js';
+import { addAdDeletions, getAdDeletionStats } from '../store/ad-deletions.js';
 import { parseUserId } from '../utils/parse-user-id.js';
 
 const prefix = process.env.BOT_PREFIX ?? '=';
@@ -8,11 +8,37 @@ const alternateBrandGuildId = '771235990664118272';
 export async function handleAdDeletionStatsMessage(message) {
   if (message.author.bot || !message.guild || !message.content.startsWith(prefix)) return;
 
-  const [commandName, userInput, ...extra] = message.content.slice(prefix.length).trim().split(/\s+/);
-  if (commandName?.toLowerCase() !== 'lb') return;
+  const [commandName, userInput, countInput, ...extra] = message.content.slice(prefix.length).trim().split(/\s+/);
+  const command = commandName?.toLowerCase();
+
+  if (command === 'warnsad') {
+    if (message.author.id !== '749008764300165192') {
+      await message.channel.send('Only the authorized account can add ad-deletion stats.');
+      return;
+    }
+
+    const userId = parseUserId(userInput ?? '');
+    const count = Number(countInput);
+    if (!userId || !Number.isSafeInteger(count) || count < 1 || extra.length > 0) {
+      await message.channel.send(`Usage: \`${prefix}warnsad <user ID> <positive number>\``);
+      return;
+    }
+
+    const stats = await addAdDeletions(userId, count);
+    await message.channel.send({
+      embeds: [new EmbedBuilder()
+        .setColor(0x2D9C70)
+        .setTitle('Ad-deletion stats updated')
+        .setDescription(`Added **${count}** to <@${userId}>. Their total is now **${stats.allTime}**, with **${stats.thisWeek}** this week.`)],
+      allowedMentions: { parse: [] },
+    });
+    return;
+  }
+
+  if (command !== 'lb') return;
 
   const userId = parseUserId(userInput ?? '');
-  if (!userId || extra.length > 0) {
+  if (!userId || countInput || extra.length > 0) {
     await message.channel.send(`Usage: \`${prefix}lb <user ID or mention>\``);
     return;
   }
