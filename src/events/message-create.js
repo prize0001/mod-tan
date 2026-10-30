@@ -1,3 +1,4 @@
+
 import { PermissionFlagsBits } from 'discord.js';
 import { issueAdWarning } from '../utils/issue-ad-warning.js';
 import { hasRequiredCommandRole } from '../utils/command-role-access.js';
