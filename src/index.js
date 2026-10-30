@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { ActivityType, AuditLogEvent, Client, Collection, Events, GatewayIntentBits } from 'discord.js';
 import { handleAdWarningModalSubmit } from './commands/ad-warning-context.js';
+import { handleAdWarningRemoveMessage } from './commands/adwarningremove.js';
+import { handlePingMessage } from './commands/ping.js';
 import { handleAdMessage } from './events/message-create.js';
 import { handleBanMessage } from './events/ban-command.js';
 import { handleKickMessage } from './events/kick-command.js';
@@ -15,9 +17,6 @@ import { handleBumpMessage } from './events/bump-command.js';
 import { handleAdCounterMessage } from './events/ad-counter.js';
 import { handleAdDeletionStatsMessage } from './events/ad-deletion-stats.js';
 import { handleAdWarnsMessage } from './events/ad-warns-command.js';
-import { handleAdWarningRemoveMessage } from './events/ad-warning-remove-command.js';
-import { handlePingMessage } from './events/ping-command.js';
-import { handleWarnsadMessage } from './events/warnsad-command.js';
 import { startAutoAdScheduler } from './utils/auto-ad-scheduler.js';
 import { createResponseEmbed } from './utils/response-embed.js';
 import { logModerationAction } from './utils/log-moderation-action.js';
@@ -131,12 +130,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
 client.on(Events.MessageCreate, async (message) => {
   try {
-    await handleWarnsadMessage(message);
-  } catch (error) {
-    console.error('Manual ad-deletion stats command failed:', error);
-  }
-
-  try {
     await handlePingMessage(message);
   } catch (error) {
     console.error('Prefix ping command failed:', error);
@@ -199,7 +192,7 @@ client.on(Events.MessageCreate, async (message) => {
     await handleAdDeletionStatsMessage(message);
   } catch (error) {
     console.error('Ad-deletion stats command failed:', error);
-    if (isPrefixCommand(message, ['lb'])) {
+    if (isPrefixCommand(message, ['lb', 'warnsad'])) {
       await message.channel.send({
         embeds: [createResponseEmbed('Ad stats lookup failed', 'I could not read ad-deletion stats. Check the bot console for the storage error.', 'error')],
       }).catch(console.error);
