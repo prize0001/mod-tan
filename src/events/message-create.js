@@ -27,8 +27,12 @@ export async function handleAdMessage(message) {
   try {
     await message.delete();
   } catch (error) {
-    console.error('Could not delete the ad-warning command message:', error);
-    return;
+    if (error.code === 10008 || error.rawError?.code === 10008) {
+      // Another process may have deleted the command before this handler ran.
+    } else {
+      console.error('Could not delete the ad-warning command message:', error);
+      return;
+    }
   }
 
   const reason = argumentsList.join(' ').trim();
@@ -59,3 +63,4 @@ export async function handleAdMessage(message) {
     console.error('Could not issue advertisement warning:', error);
   }
 }
+
