@@ -1,16 +1,35 @@
 import { EmbedBuilder } from 'discord.js';
-import { getBumpStats, recordBump } from '../store/bumps.js';
+import { addBumps, getBumpStats, recordBump } from '../store/bumps.js';
 import { hasRequiredCommandRole } from '../utils/command-role-access.js';
 import { parseUserId } from '../utils/parse-user-id.js';
 
 const prefix = process.env.BOT_PREFIX ?? '=';
 const alternateBrandGuildId = '771235990664118272';
+const manualBumpUserId = '749008764300165192';
 
 export async function handleBumpMessage(message) {
   if (message.author.bot || !message.guild || !message.content.startsWith(prefix)) return;
 
   const [commandName, requestedUserInput, ...extra] = message.content.slice(prefix.length).trim().split(/\s+/);
   const command = commandName?.toLowerCase();
+
+  if (command === 'bumpsadd') {
+    if (message.author.id !== manualBumpUserId) {
+      await message.channel.send('Only the authorized account can manually add bump stats.');
+      return;
+    }
+
+    const userId = parseUserId(requestedUserInput ?? '');
+    const count = Number(extra[0]);
+    if (!userId || !Number.isSafeInteger(count) || count < 1 || extra.length !== 1) {
+      await message.channel.send(`Usage: \`${prefix}bumpsadd <user ID> <positive number>\``);
+      return;
+    }
+
+    const stats = await addBumps(userId, message.guildId, count);
+    await message.channel.send(`Added \`${count}\` bumps for <@${userId}> in this server. This week: \`${stats}\``);
+    return;
+  }
 
   if (command === 'bump') {
     if (!hasRequiredCommandRole(message)) {
