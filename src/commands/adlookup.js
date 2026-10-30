@@ -1,0 +1,39 @@
+import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
+import { findAdWarning } from '../store/ad-warnings.js';
+import { createAdWarningEmbed } from '../utils/ad-warning-embed.js';
+import { createResponseEmbed } from '../utils/response-embed.js';
+
+export default {
+  data: new SlashCommandBuilder()
+    .setName('adlookup')
+    .setDescription('Look up a saved advertisement warning by its code.')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
+    .addStringOption((option) => option
+      .setName('code')
+      .setDescription('Warning code, for example cs78gf or adwarn cs78gf')
+      .setMaxLength(40)
+      .setRequired(true)),
+  async execute(interaction) {
+    if (!interaction.inGuild() || !interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages)) {
+      return interaction.reply({
+        embeds: [createResponseEmbed('Permission required', 'You need Manage Messages permission to look up advertisement warnings.', 'error')],
+        ephemeral: true,
+      });
+    }
+
+    const code = interaction.options.getString('code', true);
+    const warning = await findAdWarning(code, interaction.guildId);
+
+    if (!warning) {
+      return interaction.reply({
+        embeds: [createResponseEmbed('Warning not found', 'No saved advertisement warning matches that code.', 'error')],
+        ephemeral: true,
+      });
+    }
+
+    return interaction.reply({
+      embeds: [createAdWarningEmbed(warning)],
+      allowedMentions: { parse: [] },
+    });
+  },
+};

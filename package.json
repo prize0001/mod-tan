@@ -1,0 +1,19 @@
+{
+  "name": "discord-moderation-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A custom Discord moderation bot built with discord.js.",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "deploy-commands": "node scripts/deploy-commands.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "discord.js": "^14.21.0",
+    "dotenv": "^16.4.7"
+  }
+}
