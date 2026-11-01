@@ -50,8 +50,15 @@ for (const file of commandFiles.filter((entry) => entry.endsWith('.js'))) {
   }
 }
 
-client.once(Events.ClientReady, (readyClient) => {
+client.once(Events.ClientReady, async (readyClient) => {
   startAutoAdScheduler(readyClient);
+  for (const command of client.commands.values()) {
+    try {
+      await command.onReady?.(readyClient);
+    } catch (error) {
+      console.error(`Command startup hook failed for /${command.data.name}:`, error);
+    }
+  }
   readyClient.user.setPresence({
     activities: [{ name: 'AYS', type: ActivityType.Watching }],
     status: 'online',
@@ -215,6 +222,15 @@ client.on(Events.MessageCreate, async (message) => {
     await handleAdCounterMessage(message);
   } catch (error) {
     console.error(`Sticky message refresh failed in channel ${message.channelId}:`, error);
+  }
+
+  for (const command of client.commands.values()) {
+    if (typeof command.onMessage !== 'function') continue;
+    try {
+      await command.onMessage(message);
+    } catch (error) {
+      console.error(`Message hook failed for /${command.data.name}:`, error);
+    }
   }
 });
 
