@@ -11,7 +11,7 @@ A JavaScript moderation bot using discord.js and guild-scoped slash commands. Th
 
 1. In the Developer Portal, create an application, add a bot, and copy its bot token. Keep the token private; regenerate it immediately if it is exposed.
 2. Copy `.env.example` to `.env` and set `DISCORD_TOKEN`, `CLIENT_ID` (the application ID), and `GUILD_IDS` to the IDs of the two servers, separated by a comma. Example: `GUILD_IDS=123456789012345678,234567890123456789`. `.env` is ignored by Git.
-3. In **Bot > Privileged Gateway Intents**, enable **Message Content Intent** for the `=ad`, `=bump`, `=bumps`, and `=lb` message commands.
+3. In **Bot > Privileged Gateway Intents**, enable **Message Content Intent** for the prefix commands and sticky ads, which refresh when people post.
 4. In **OAuth2 > URL Generator**, select the `bot` and `applications.commands` scopes. Grant only the permissions needed by the commands: View Channels, Send Messages, Read Message History, View Audit Log, Use Application Commands, Kick Members, Ban Members, Moderate Members, and Manage Messages. Invite the bot to both servers using the generated URL. Ensure it can view and send messages in moderation log channel `865343173819629589` and warning channels `1291609464478105661` and `772414258961055764`.
 5. In each server, keep the bot's highest role above roles it needs to moderate.
 6. Install dependencies with `npm install`.
@@ -27,6 +27,7 @@ Guild commands usually update quickly and are visible only in the configured ser
 - `=warnsad <user ID> <number>` manually adds ad-deletion counts used by `=lb`. Only user `749008764300165192` can use it.
 - Successful ad deletions through the `=ad <reason>` warning command and the Ad Warning message action are counted for the moderator. Use `=lb <user ID>` to look up combined weekly, monthly, and all-time deletion stats and weekly rank across servers. Weekly counts roll over Monday (UTC); totals persist across restarts.
 - In server `852771975730298880`, ad deletion (`=ad` or the Ad Warning action) and `=bump` require role `852778233275613235`. In server `771235990664118272`, they require role `771747709170352139`.
+- In server `852771975730298880`, `/stickyad create message channels duration` creates a sticky ad that posts after the next human message in each selected channel, then deletes and reposts it after each later human message. Durations accept values such as `1 week`, `4 months`, `30d`, or `12h` (up to 12 months). `/stickyad list` shows all active ads; `/stickyad remove id` stops an ad and deletes its latest posts. Only members with role `1115815957802258434` can create, list, or remove sticky ads.
 - `/autoad create`, `/autoad list`, and `/autoad remove` require role `1115815957802258434`.
 - `/help` shows available bot commands.
 - `=ping` or `/ping` checks that the bot is responding.
