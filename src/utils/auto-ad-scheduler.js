@@ -4,7 +4,7 @@ import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 const storePath = process.env.AUTO_AD_STORE_PATH ?? join(process.cwd(), 'data', 'auto-ads.json');
-export const AUTO_AD_INTERVAL_MS = 3 * 60 * 60 * 1000;
+export const DEFAULT_AUTO_AD_INTERVAL_MS = 3 * 60 * 60 * 1000;
 const ownerUserId = '749008764300165192';
 let writeQueue = Promise.resolve();
 let schedulerRunning = false;
@@ -49,7 +49,7 @@ function mutateCampaigns(callback) {
   return operation;
 }
 
-export function createAutoAd({ guildId, creatorId, description, channelIds, durationMs }) {
+export function createAutoAd({ guildId, creatorId, description, channelIds, durationMs, intervalMs }) {
   return mutateCampaigns((campaigns) => {
     const id = randomUUID().slice(0, 8);
     const now = Date.now();
@@ -59,6 +59,7 @@ export function createAutoAd({ guildId, creatorId, description, channelIds, dura
       creatorId,
       description,
       channelIds,
+      intervalMs,
       createdAt: now,
       expiresAt: now + durationMs,
       nextPostAt: now,
@@ -151,7 +152,7 @@ async function finishCampaign(client, campaign) {
 
 async function postCampaign(client, campaign) {
   await updateCampaign(campaign.id, (stored) => {
-    stored.nextPostAt = Date.now() + AUTO_AD_INTERVAL_MS;
+    stored.nextPostAt = Date.now() + (campaign.intervalMs ?? DEFAULT_AUTO_AD_INTERVAL_MS);
   });
 
   for (const channelId of campaign.channelIds) {
