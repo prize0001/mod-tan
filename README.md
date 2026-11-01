@@ -30,7 +30,7 @@ Guild commands usually update quickly and are visible only in the configured ser
 - `/autoad create`, `/autoad list`, and `/autoad remove` require role `1115815957802258434`.
 - `/help` shows available bot commands.
 - `=ping` or `/ping` checks that the bot is responding.
-- `/autoad create description channels duration` posts an ad immediately and every 3 hours until its duration ends (for example `7d` or `30 days`). Use comma-separated `#channel` names or channel mentions. `/autoad list` shows active ads; `/autoad remove id` stops one and deletes its posts. Administrator permission is required. On expiry, the bot removes the ad messages and DMs user `749008764300165192` with the ended ad text.
+- `/autoad create description channels duration interval` posts an ad immediately, then repeats at the selected hourly interval such as `1h` or `6hr`, until its duration ends (for example `7d` or `30 days`). Use comma-separated `#channel` names or channel mentions. `/autoad list` shows each ad interval; `/autoad remove id` stops one and deletes its posts. Administrator permission is required. On expiry, the bot removes the ad messages and DMs user `749008764300165192` with the ended ad text.
 - `/kick user reason` removes a server member. `user` accepts a raw user ID or mention.
 - `/ban user reason` bans a user and deletes their messages from the previous 7 days; `user` accepts a raw user ID or mention, even if they are not in the server.
 - `=ban <user ID> <reason>` bans a user by ID and deletes their messages from the previous 7 days. The reason is required, and only members with role `852778343908900896` or `852778216464973844` can use this prefix command.
