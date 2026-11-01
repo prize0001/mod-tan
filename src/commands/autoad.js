@@ -1,6 +1,7 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 import {
   createAutoAd,
+  DEFAULT_AUTO_AD_INTERVAL_MS,
   listAutoAds,
   processAutoAds,
   removeAutoAd,
@@ -24,6 +25,15 @@ function parseDuration(value) {
   const duration = amount * (unit === 'm' ? 60_000 : unit === 'h' ? 60 * 60_000 : 24 * 60 * 60_000);
   if (!Number.isSafeInteger(duration) || duration < 60_000 || duration > 365 * 24 * 60 * 60_000) return null;
   return duration;
+}
+
+function parseInterval(value) {
+  const match = value.trim().toLowerCase().match(/^(\d+)\s*(h|hr|hrs|hour|hours)$/);
+  if (!match) return null;
+
+  const hours = Number(match[1]);
+  if (!Number.isSafeInteger(hours) || hours < 1 || hours > 365 * 24) return null;
+  return hours * 60 * 60_000;
 }
 
 function resolveChannelIds(value, guild) {
@@ -57,10 +67,11 @@ export default {
     .setDescription('Schedule and manage recurring ads.')
     .addSubcommand((subcommand) => subcommand
       .setName('create')
-      .setDescription('Post an ad every 3 hours until its duration ends.')
+      .setDescription('Post an ad at a chosen hourly interval until its duration ends.')
       .addStringOption((option) => option.setName('description').setDescription('Text of the ad').setMaxLength(1800).setRequired(true))
       .addStringOption((option) => option.setName('channels').setDescription('Comma-separated #channel names or channel mentions').setMaxLength(500).setRequired(true))
-      .addStringOption((option) => option.setName('duration').setDescription('Duration such as 7d, 30 days, or 12h').setMaxLength(30).setRequired(true)))
+      .addStringOption((option) => option.setName('duration').setDescription('Duration such as 7d, 30 days, or 12h').setMaxLength(30).setRequired(true))
+      .addStringOption((option) => option.setName('interval').setDescription('Post every 1h, 6hr, or another whole number of hours').setMaxLength(20).setRequired(true)))
     .addSubcommand((subcommand) => subcommand
       .setName('list')
       .setDescription('List active auto ads.'))
@@ -88,7 +99,7 @@ export default {
     if (action === 'list') {
       const campaigns = await listAutoAds(interaction.guildId);
       const description = campaigns.length
-        ? campaigns.map((campaign) => `**${campaign.id}** · ends <t:${Math.floor(campaign.expiresAt / 1000)}:R> · ${campaign.channelIds.length} channel(s)\n${campaign.description.slice(0, 150)}`).join('\n\n')
+        ? campaigns.map((campaign) => `**${campaign.id}** · every ${formatInterval(campaign.intervalMs)} · ends <t:${Math.floor(campaign.expiresAt / 1000)}:R> · ${campaign.channelIds.length} channel(s)\n${campaign.description.slice(0, 150)}`).join('\n\n')
         : 'There are no active auto ads in this server.';
       return interaction.reply({ embeds: [createResponseEmbed('Active auto ads', description)], ephemeral: true });
     }
@@ -116,6 +127,7 @@ export default {
     const description = interaction.options.getString('description', true).trim();
     const channelIds = resolveChannelIds(interaction.options.getString('channels', true), interaction.guild);
     const durationMs = parseDuration(interaction.options.getString('duration', true));
+    const intervalMs = parseInterval(interaction.options.getString('interval', true));
     if (!description) {
       return interaction.reply({ embeds: [createResponseEmbed('Description required', 'Enter the ad text to post.', 'error')], ephemeral: true });
     }
@@ -124,6 +136,9 @@ export default {
     }
     if (!durationMs) {
       return interaction.reply({ embeds: [createResponseEmbed('Invalid duration', 'Use a duration such as `7d`, `30 days`, or `12h` (up to 365 days).', 'error')], ephemeral: true });
+    }
+    if (!intervalMs) {
+      return interaction.reply({ embeds: [createResponseEmbed('Invalid posting interval', 'Enter a whole number of hours such as `1h` or `6hr` (from 1 hour up to 365 days).', 'error')], ephemeral: true });
     }
 
     const channels = [];
@@ -146,10 +161,16 @@ export default {
       description,
       channelIds: channels.map((channel) => channel.id),
       durationMs,
+      intervalMs,
     });
     await processAutoAds(interaction.client);
     return interaction.editReply({
-      embeds: [createResponseEmbed('Auto ad created', `ID: **${campaign.id}**\nPosting to ${channels.map((channel) => `${channel}`).join(', ')} immediately and every 3 hours. It ends <t:${Math.floor(campaign.expiresAt / 1000)}:R>.`, 'success')],
+      embeds: [createResponseEmbed('Auto ad created', `ID: **${campaign.id}**\nPosting to ${channels.map((channel) => `${channel}`).join(', ')} immediately and every ${formatInterval(campaign.intervalMs)}. It ends <t:${Math.floor(campaign.expiresAt / 1000)}:R>.`, 'success')],
     });
   },
 };
+
+function formatInterval(intervalMs) {
+  const hours = (intervalMs ?? DEFAULT_AUTO_AD_INTERVAL_MS) / (60 * 60_000);
+  return `${hours}h`;
+}
