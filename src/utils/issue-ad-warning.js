@@ -49,10 +49,17 @@ export async function issueAdWarning({ client, guild, targetMessage, moderatorId
       throw new Error(`Warning destination ${channelId} is not a text channel.`);
     }
 
+    const content = warning.cooldownActive
+      ? `⚠️ Cooldown Active | <@${warning.moderatorId}>`
+      : `<@${warning.userId}> | <@${warning.moderatorId}>`;
+    const usersToNotify = warning.cooldownActive
+      ? [warning.moderatorId]
+      : [warning.userId, warning.moderatorId];
+
     return channel.send({
-      content: `<@${warning.userId}> | <@${warning.moderatorId}>`,
+      content,
       embeds: [createAdWarningEmbed(warning)],
-      allowedMentions: { parse: [], users: [...new Set([warning.userId, warning.moderatorId])] },
+      allowedMentions: { parse: [], users: [...new Set(usersToNotify)] },
     });
   }));
 
