@@ -61,8 +61,6 @@ const monitoredChannelsByGuild = {
 
 const inviteChannelsByGuild = {
   '852771975730298880': new Set(['852808187333181450']),
-  // AYC provided no separate invite-only channel, so enforce that rule in its monitored ad channels.
-  '771235990664118272': monitoredChannelsByGuild['771235990664118272'],
 };
 
 const logChannelByGuild = {
@@ -87,7 +85,7 @@ export function findViolations(message, isInviteOnlyChannel, isMonitoredChannel 
 
   const containsInvite = discordInvitePattern.test(content);
   if (isInviteOnlyChannel && containsInvite) {
-    violations.push('Discord invite posted in a restricted channel');
+    violations.push('Discord invite link detected');
   }
 
   // Short ordinary chat should not be treated as an advertisement. A link is the
