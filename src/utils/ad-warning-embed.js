@@ -13,6 +13,7 @@ export function createAdWarningEmbed(warning) {
     `<:mm_dot:1402737072032190504> **User |** <@${warning.userId}> (\`${warning.userId}\`)`,
     `<:mm_dot:1402737072032190504> **Channel |** <#${warning.channelId}>`,
     `<:mm_dot:1402737072032190504> **Reason |** ${reason}`,
+    ...(warning.cooldownActive ? ['', '⚠️ **Cooldown Active:** User was warned recently. No user ping was sent.'] : []),
     '',
     `<:mm_dot:1402737072032190504> **Current Warnings |** \`${warning.warningCount}\``,
     `<:mm_dot:1402737072032190504> **Ad Code |** \`${warning.code}\``,
@@ -30,3 +31,4 @@ export function createAdWarningEmbed(warning) {
     .setDescription(`${details}\n\n${appealText}`)
     .setTimestamp(new Date(warning.createdAt));
 }
+
