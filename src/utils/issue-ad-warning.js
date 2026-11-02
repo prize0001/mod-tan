@@ -14,7 +14,7 @@ const fallbackWarningChannelIds = (process.env.AD_WARNING_CHANNEL_IDS
   .map((channelId) => channelId.trim())
   .filter(Boolean);
 
-export async function issueAdWarning({ client, guild, targetMessage, moderatorId, reason }) {
+export async function issueAdWarning({ client, guild, targetMessage, moderatorId, reason, trackAdDeletion = true }) {
   if (targetMessage.guildId !== guild.id) {
     throw new Error('The message must belong to the current server.');
   }
@@ -34,10 +34,12 @@ export async function issueAdWarning({ client, guild, targetMessage, moderatorId
 
   await targetMessage.delete();
 
-  try {
-    await recordAdDeletion(moderatorId);
-  } catch (error) {
-    console.error(`Could not record ad deletion by moderator ${moderatorId}:`, error);
+  if (trackAdDeletion) {
+    try {
+      await recordAdDeletion(moderatorId);
+    } catch (error) {
+      console.error(`Could not record ad deletion by moderator ${moderatorId}:`, error);
+    }
   }
 
   const warningChannelIds = warningChannelsByGuild[guild.id] ?? fallbackWarningChannelIds;
@@ -65,3 +67,4 @@ export async function issueAdWarning({ client, guild, targetMessage, moderatorId
 
   return { warning, deliveredCount, totalChannels: warningChannelIds.length };
 }
+
