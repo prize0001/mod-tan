@@ -7,7 +7,7 @@ import { hasBanAndLeftCommandRole } from '../utils/command-role-access.js';
 const prefix = process.env.BOT_PREFIX ?? '=';
 const sevenDaysInSeconds = 7 * 24 * 60 * 60;
 const sevenDaysMs = sevenDaysInSeconds * 1000;
-const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
 
 function canReadAndDeleteHistory(channel, botMember) {
   if (!channel.isTextBased?.() || !channel.messages?.fetch) return false;
@@ -86,9 +86,9 @@ async function deleteOlderMessages(channel, targetId, cutoff, recentBanCutoff) {
   return { deleted, failed };
 }
 
-async function deleteUserMessagesFromLastThirtyDays(guild, targetId, botMember, banRequestedAt) {
+async function deleteUserMessagesFromLastFourteenDays(guild, targetId, botMember, banRequestedAt) {
   const now = Date.now();
-  const cutoff = now - thirtyDaysMs;
+  const cutoff = now - fourteenDaysMs;
   const recentBanCutoff = banRequestedAt - sevenDaysMs;
   const channels = await collectHistoryChannels(guild, cutoff);
   let scannedChannels = 0;
@@ -148,7 +148,7 @@ export async function handleLeftMessage(message) {
 
   const reason = 'User left';
   const statusMessage = await message.channel.send({
-    embeds: [createResponseEmbed('Processing left command', `Deleting <@${targetId}>’s messages from the past 30 days, then unbanning them.`, 'info')],
+    embeds: [createResponseEmbed('Processing left command', `Deleting <@${targetId}>’s messages from the past 14 days, then unbanning them.`, 'info')],
     allowedMentions: { parse: [] },
   }).catch(() => null);
 
@@ -165,10 +165,10 @@ export async function handleLeftMessage(message) {
   }
 
   try {
-    deletionStats = await deleteUserMessagesFromLastThirtyDays(message.guild, targetId, botMember, banRequestedAt);
+    deletionStats = await deleteUserMessagesFromLastFourteenDays(message.guild, targetId, botMember, banRequestedAt);
   } catch (error) {
     deletionStats.skippedChannels++;
-    console.error(`Could not scan the full 30-day message history for ${targetId}:`, error);
+    console.error(`Could not scan the full 14-day message history for ${targetId}:`, error);
   }
 
   try {
@@ -208,7 +208,7 @@ export async function handleLeftMessage(message) {
     ? `\n⚠️ ${deletionStats.failedDeletions} older message(s) could not be deleted.`
     : '';
   const response = {
-    content: `🔨 Banned \`${targetId}\` indefinitely\n\n🧹 Deleted **${deletionStats.deletedMessages}** older message(s) from the past 30 days across **${deletionStats.scannedChannels}** accessible channel(s).${channelSummary}${deletionSummary}\n\n🔓 Unbanned \`${targetId}\``,
+    content: `🔨 Banned \`${targetId}\` indefinitely\n\n🧹 Deleted **${deletionStats.deletedMessages}** older message(s) from the past 14 days across **${deletionStats.scannedChannels}** accessible channel(s). Discord’s ban step also removes messages from the most recent 7 days.${channelSummary}${deletionSummary}\n\n🔓 Unbanned \`${targetId}\``,
     allowedMentions: { parse: [] },
   };
   if (statusMessage) await statusMessage.edit(response).catch(() => undefined);
