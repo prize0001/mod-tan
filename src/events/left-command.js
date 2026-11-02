@@ -8,6 +8,7 @@ const prefix = process.env.BOT_PREFIX ?? '=';
 const sevenDaysInSeconds = 7 * 24 * 60 * 60;
 const sevenDaysMs = sevenDaysInSeconds * 1000;
 const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+const activeLeftCommands = new Set();
 
 function canReadAndDeleteHistory(channel, botMember) {
   if (!channel.isTextBased?.() || !channel.messages?.fetch) return false;
@@ -66,16 +67,30 @@ async function deleteOlderMessages(channel, targetId, cutoff, recentBanCutoff) {
     let oldestMessage = null;
     for (const oldMessage of batch.values()) {
       if (!oldestMessage || oldMessage.createdTimestamp < oldestMessage.createdTimestamp) oldestMessage = oldMessage;
-      if (oldMessage.author.id !== targetId
-        || oldMessage.createdTimestamp < cutoff
-        || oldMessage.createdTimestamp >= recentBanCutoff) continue;
+    }
+
+    const targetMessages = [...batch.values()].filter((oldMessage) =>
+      oldMessage.author.id === targetId
+      && oldMessage.createdTimestamp >= cutoff
+      && oldMessage.createdTimestamp < recentBanCutoff
+    );
+    if (targetMessages.length > 0) {
       try {
-        await oldMessage.delete();
-        deleted++;
-      } catch (error) {
-        if (error.code !== 10008 && error.rawError?.code !== 10008) {
-          failed++;
-          console.error(`Could not delete message ${oldMessage.id} from ${targetId} in channel ${channel.id}:`, error);
+        if (typeof channel.bulkDelete !== "function") throw new Error("Bulk deletion is unavailable for this channel.");
+        const deletedBatch = await channel.bulkDelete(targetMessages, true);
+        deleted += deletedBatch.size;
+      } catch (bulkError) {
+        console.warn("Bulk deletion failed in channel " + channel.id + "; trying individual message deletions.", bulkError);
+        for (const oldMessage of targetMessages) {
+          try {
+            await oldMessage.delete();
+            deleted++;
+          } catch (error) {
+            if (error.code !== 10008 && error.rawError?.code !== 10008) {
+              failed++;
+              console.error("Could not delete message " + oldMessage.id + " from " + targetId + " in channel " + channel.id + ":", error);
+            }
+          }
         }
       }
     }
@@ -85,7 +100,6 @@ async function deleteOlderMessages(channel, targetId, cutoff, recentBanCutoff) {
   }
   return { deleted, failed };
 }
-
 async function deleteUserMessagesFromLastFourteenDays(guild, targetId, botMember, banRequestedAt) {
   const now = Date.now();
   const cutoff = now - fourteenDaysMs;
@@ -120,84 +134,108 @@ export async function handleLeftMessage(message) {
   if (message.author.bot || !message.guild || !message.content.startsWith(prefix)) return;
 
   const [commandName, ...args] = message.content.slice(prefix.length).trim().split(/\s+/);
-  if (commandName?.toLowerCase() !== 'left') return;
+  if (commandName?.toLowerCase() !== "left") return;
 
   if (!hasBanAndLeftCommandRole(message)) {
-    await message.channel.send({ embeds: [createResponseEmbed('Permission required', 'You need an authorized role to use this softban command.', 'error')] });
+    await message.channel.send({ embeds: [createResponseEmbed("Permission required", "You need an authorized role to use this softban command.", "error")] });
     return;
   }
 
-  const targetId = parseUserId(args[0] ?? '');
+  const targetId = parseUserId(args[0] ?? "");
   if (!targetId || args.length > 1) {
-    await message.channel.send({ embeds: [createResponseEmbed('Usage', `Use \`${prefix}left <user ID>\`.`, 'error')] });
+    await message.channel.send({ embeds: [createResponseEmbed("Usage", "Use =left <user ID>.", "error")] });
     return;
   }
 
   const botMember = message.guild.members.me;
   if (!botMember?.permissions.has(PermissionFlagsBits.BanMembers)) {
-    await message.channel.send({ embeds: [createResponseEmbed('Softban unavailable', 'I need the Ban Members permission to use this command.', 'error')] });
+    await message.channel.send({ embeds: [createResponseEmbed("Softban unavailable", "I need the Ban Members permission to use this command.", "error")] });
     return;
   }
 
-  const member = await message.guild.members.fetch(targetId).catch(() => null);
-  if (member && !member.bannable) {
-    await message.channel.send({ embeds: [createResponseEmbed('Softban unavailable', 'I cannot ban that member. Check role hierarchy and bot permissions.', 'error')] });
+  const commandKey = message.guild.id + ":" + targetId;
+  if (activeLeftCommands.has(commandKey)) {
+    await message.channel.send("A =left command for that user is already in progress.");
     return;
   }
-  const targetUser = member?.user ?? await message.client.users.fetch(targetId).catch(() => null);
-
-  const reason = 'User left';
-  let deletionStats = { deletedMessages: 0, scannedChannels: 0, skippedChannels: 0, failedDeletions: 0 };
-  const banRequestedAt = Date.now();
-  try {
-    await message.guild.members.ban(targetId, { reason, deleteMessageSeconds: sevenDaysInSeconds });
-  } catch (error) {
-    console.error(`Prefix softban deletion step failed for ${targetId}:`, error);
-    await message.channel.send({ embeds: [createResponseEmbed('Softban failed', 'Discord could not complete the softban. Check the bot permissions and try again.', 'error')] });
-    return;
-  }
+  activeLeftCommands.add(commandKey);
 
   try {
-    deletionStats = await deleteUserMessagesFromLastFourteenDays(message.guild, targetId, botMember, banRequestedAt);
-    if (deletionStats.skippedChannels || deletionStats.failedDeletions) {
-      console.warn(`Left command for ${targetId} completed with ${deletionStats.skippedChannels} skipped channel(s) and ${deletionStats.failedDeletions} failed deletion(s).`);
+    const progressMessage = await message.channel.send("⏳ Processing =left and removing up to 14 days of message history…");
+    const member = await message.guild.members.fetch(targetId).catch(() => null);
+    if (member && !member.bannable) {
+      await progressMessage.edit({ content: null, embeds: [createResponseEmbed("Softban unavailable", "I cannot ban that member. Check role hierarchy and bot permissions.", "error")] });
+      return;
     }
-  } catch (error) {
-    deletionStats.skippedChannels++;
-    console.error(`Could not scan the full 14-day message history for ${targetId}:`, error);
-  }
+    const targetUser = member?.user ?? await message.client.users.fetch(targetId).catch(() => null);
 
-  try {
-    await message.guild.members.unban(targetId, reason);
-  } catch (error) {
-    await logModerationAction({
-      client: message.client,
-      guild: message.guild,
-      action: 'Member softbanned (unban failed)',
-      moderator: message.author,
-      targetUser,
-      targetId,
-      targetLabel: targetUser?.username ?? `User ${targetId}`,
-      reason: `${reason} | Unban failed: ${error.message}`,
+    const reason = "User left";
+    let deletionStats = { deletedMessages: 0, scannedChannels: 0, skippedChannels: 0, failedDeletions: 0 };
+    const banRequestedAt = Date.now();
+    try {
+      await message.guild.members.ban(targetId, { reason, deleteMessageSeconds: sevenDaysInSeconds });
+    } catch (error) {
+      console.error("Prefix softban deletion step failed for " + targetId + ":", error);
+      await progressMessage.edit({ content: null, embeds: [createResponseEmbed("Softban failed", "Discord could not complete the softban. Check the bot permissions and try again.", "error")] });
+      return;
+    }
+
+    try {
+      deletionStats = await deleteUserMessagesFromLastFourteenDays(message.guild, targetId, botMember, banRequestedAt);
+      if (deletionStats.skippedChannels || deletionStats.failedDeletions) {
+        console.warn("Left command for " + targetId + " completed with " + deletionStats.skippedChannels + " skipped channel(s) and " + deletionStats.failedDeletions + " failed deletion(s).");
+      }
+    } catch (error) {
+      deletionStats.skippedChannels++;
+      console.error("Could not scan the full 14-day message history for " + targetId + ":", error);
+    }
+
+    try {
+      await message.guild.members.unban(targetId, reason);
+    } catch (error) {
+      try {
+        await logModerationAction({
+          client: message.client,
+          guild: message.guild,
+          action: "Member softbanned (unban failed)",
+          moderator: message.author,
+          targetUser,
+          targetId,
+          targetLabel: targetUser?.username ?? "User " + targetId,
+          reason: reason + " | Unban failed: " + error.message,
+        });
+      } catch (logError) {
+        console.error("Could not log failed unban for " + targetId + ":", logError);
+      }
+      console.error("Prefix softban unban step failed for " + targetId + ":", error);
+      await progressMessage.edit({
+        content: null,
+        embeds: [createResponseEmbed("Unban failed", (targetUser?.tag ?? targetId) + " was banned and their messages from the past 14 days were deleted, but I could not unban them. Check the server ban list.", "error")],
+      });
+      return;
+    }
+
+    try {
+      await logModerationAction({
+        client: message.client,
+        guild: message.guild,
+        action: "Member softbanned",
+        moderator: message.author,
+        targetUser,
+        targetId,
+        targetLabel: targetUser?.username ?? "User " + targetId,
+        reason,
+      });
+    } catch (error) {
+      console.error("Could not log completed left command for " + targetId + ":", error);
+    }
+
+    await progressMessage.edit({
+      content: "🔨 Banned " + targetId + " indefinitely\n\n🔓 Unbanned " + targetId,
+      embeds: [],
+      allowedMentions: { parse: [] },
     });
-    console.error(`Prefix softban unban step failed for ${targetId}:`, error);
-    await message.channel.send({ embeds: [createResponseEmbed('Unban failed', `${targetUser?.tag ?? targetId} was banned and their messages from the past 14 days were deleted, but I could not unban them. Check the server ban list.`, 'error')] });
-    return;
+  } finally {
+    activeLeftCommands.delete(commandKey);
   }
-
-  await logModerationAction({
-    client: message.client,
-    guild: message.guild,
-    action: 'Member softbanned',
-    moderator: message.author,
-    targetUser,
-    targetId,
-    targetLabel: targetUser?.username ?? `User ${targetId}`,
-    reason,
-  });
-  await message.channel.send({
-    content: `🔨 Banned \`${targetId}\` indefinitely\n\n🔓 Unbanned \`${targetId}\``,
-    allowedMentions: { parse: [] },
-  });
 }
-
