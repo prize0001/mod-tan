@@ -28,21 +28,53 @@ const monitoredChannelsByGuild = {
     '1291612375237267507',
     '1291612492526649344',
   ]),
+  '771235990664118272': new Set([
+    '1339461344985874502',
+    '1339461471997923390',
+    '1339461570484371550',
+    '1339461808653864992',
+    '1339461708829425696',
+    '1301060137552711720',
+    '1547369382907224128',
+    '1278347297016643634',
+    '1278347333997695129',
+    '1278347274442903615',
+    '1278347355170537544',
+    '1566829425553580042',
+    '1278347250325524511',
+    '1547365269943353364',
+    '1278347241354039317',
+    '1547365574517202954',
+    '1395899275157704786',
+    '1339462326662860820',
+    '1278347282831511623',
+    '1395901044298617062',
+    '1395901386042114108',
+    '1547371994654318683',
+    '1547372098190708888',
+    '1547372162187264021',
+    '1547372224615424041',
+    '1547372295415271465',
+    '1547372379880292516',
+  ]),
 };
 
 const inviteChannelsByGuild = {
   '852771975730298880': new Set(['852808187333181450']),
+  // AYC provided no separate invite-only channel, so enforce that rule in its monitored ad channels.
+  '771235990664118272': monitoredChannelsByGuild['771235990664118272'],
 };
 
 const logChannelByGuild = {
   '852771975730298880': '1304961228657004665',
+  '771235990664118272': '1536099637281296545',
 };
 
 const discordInvitePattern = /(?:https?:\/\/)?(?:www\.)?(?:discord\.gg\/[a-z0-9-]+|discord(?:app)?\.com\/invite\/[a-z0-9-]+)/i;
 const j4jPattern = /\bj\s*4\s*j\b/i;
 const urlPattern = /(?:https?:\/\/|www\.)\S+/i;
 
-export function findViolations(message, isInviteOnlyChannel) {
+export function findViolations(message, isInviteOnlyChannel, isMonitoredChannel = true) {
   const content = message.content ?? '';
   const violations = [];
 
@@ -60,7 +92,7 @@ export function findViolations(message, isInviteOnlyChannel) {
 
   // Short ordinary chat should not be treated as an advertisement. A link is the
   // signal that a short message is advertising; J4J is handled independently.
-  if (!isInviteOnlyChannel && content.length < 150 && (urlPattern.test(content) || message.attachments.size > 0)) {
+  if (isMonitoredChannel && content.length < 150 && (urlPattern.test(content) || message.attachments.size > 0)) {
     violations.push('Advertisement is shorter than 150 characters');
   }
 
@@ -99,7 +131,7 @@ export async function handleAutomodMessage(message) {
   const inviteOnly = inviteChannelsByGuild[message.guildId]?.has(message.channelId) ?? false;
   if (!monitored && !inviteOnly) return;
 
-  const violations = findViolations(message, inviteOnly);
+  const violations = findViolations(message, inviteOnly, monitored);
   if (violations.length === 0) return;
 
   const botMember = message.guild.members.me;
