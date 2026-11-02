@@ -4,6 +4,8 @@ import { dirname, join } from 'node:path';
 
 const storePath = process.env.AD_WARNING_STORE_PATH ?? join(process.cwd(), 'data', 'ad-warnings.json');
 const codeAlphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+const warningBurstWindowMs = 30_000;
+const notificationCooldownMs = 15 * 60_000;
 let writeQueue = Promise.resolve();
 
 async function readWarnings() {
@@ -52,6 +54,19 @@ export function normalizeAdWarningCode(value) {
 
 export function addAdWarning({ guildId, userId, moderatorId, channelId, reason }) {
   return withWriteLock((warnings) => {
+    const now = Date.now();
+    const recentWarnings = warnings.filter((entry) => entry.guildId === guildId
+      && entry.userId === userId
+      && Number.isFinite(Date.parse(entry.createdAt))
+      && now - Date.parse(entry.createdAt) >= 0
+      && now - Date.parse(entry.createdAt) <= warningBurstWindowMs);
+    const activeCooldownUntil = warnings
+      .filter((entry) => entry.guildId === guildId && entry.userId === userId && entry.cooldownUntil)
+      .map((entry) => Date.parse(entry.cooldownUntil))
+      .filter((until) => Number.isFinite(until) && until > now)
+      .reduce((latest, until) => Math.max(latest, until), 0);
+    const cooldownStarted = activeCooldownUntil === 0 && recentWarnings.length >= 1;
+    const cooldownUntil = activeCooldownUntil || (cooldownStarted ? now + notificationCooldownMs : null);
     const warningCount = warnings.filter((warning) => warning.guildId === guildId && warning.userId === userId).length + 1;
     const warning = {
       code: createCode(warnings),
@@ -61,7 +76,9 @@ export function addAdWarning({ guildId, userId, moderatorId, channelId, reason }
       channelId,
       reason,
       warningCount,
-      createdAt: new Date().toISOString(),
+      createdAt: new Date(now).toISOString(),
+      ...(cooldownUntil ? { cooldownActive: true } : {}),
+      ...(cooldownStarted ? { cooldownUntil: new Date(cooldownUntil).toISOString() } : {}),
     };
 
     warnings.push(warning);
@@ -96,3 +113,4 @@ export function removeAdWarning(value, guildId) {
     return warnings.splice(index, 1)[0];
   });
 }
+
