@@ -2,9 +2,9 @@ import { PermissionFlagsBits } from 'discord.js';
 import { logModerationAction } from '../utils/log-moderation-action.js';
 import { parseUserId } from '../utils/parse-user-id.js';
 import { createResponseEmbed } from '../utils/response-embed.js';
+import { hasBanAndLeftCommandRole } from '../utils/command-role-access.js';
 
 const prefix = process.env.BOT_PREFIX ?? '=';
-const allowedRoleIds = ['852778343908900896', '852778216464973844'];
 
 export async function handleBanMessage(message) {
   if (message.author.bot || !message.guild || !message.content.startsWith(prefix)) return;
@@ -12,7 +12,7 @@ export async function handleBanMessage(message) {
   const [commandName, ...args] = message.content.slice(prefix.length).trim().split(/\s+/);
   if (commandName?.toLowerCase() !== 'ban') return;
 
-  if (!allowedRoleIds.some((roleId) => message.member?.roles.cache.has(roleId))) {
+  if (!hasBanAndLeftCommandRole(message)) {
     await message.channel.send({ embeds: [createResponseEmbed('Permission required', 'You need the authorized role to use this ban command.', 'error')] });
     return;
   }
@@ -62,3 +62,4 @@ export async function handleBanMessage(message) {
   });
   await message.channel.send({ embeds: [createResponseEmbed('User banned', `${targetUser.tag} was banned.`, 'success')] });
 }
+
