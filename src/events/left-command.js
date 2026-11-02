@@ -147,25 +147,21 @@ export async function handleLeftMessage(message) {
   const targetUser = member?.user ?? await message.client.users.fetch(targetId).catch(() => null);
 
   const reason = 'User left';
-  const statusMessage = await message.channel.send({
-    embeds: [createResponseEmbed('Processing left command', `Deleting <@${targetId}>’s messages from the past 14 days, then unbanning them.`, 'info')],
-    allowedMentions: { parse: [] },
-  }).catch(() => null);
-
   let deletionStats = { deletedMessages: 0, scannedChannels: 0, skippedChannels: 0, failedDeletions: 0 };
   const banRequestedAt = Date.now();
   try {
     await message.guild.members.ban(targetId, { reason, deleteMessageSeconds: sevenDaysInSeconds });
   } catch (error) {
     console.error(`Prefix softban deletion step failed for ${targetId}:`, error);
-    const response = { embeds: [createResponseEmbed('Softban failed', 'Discord could not complete the softban. Check the bot permissions and try again.', 'error')] };
-    if (statusMessage) await statusMessage.edit(response).catch(() => undefined);
-    else await message.channel.send(response);
+    await message.channel.send({ embeds: [createResponseEmbed('Softban failed', 'Discord could not complete the softban. Check the bot permissions and try again.', 'error')] });
     return;
   }
 
   try {
     deletionStats = await deleteUserMessagesFromLastFourteenDays(message.guild, targetId, botMember, banRequestedAt);
+    if (deletionStats.skippedChannels || deletionStats.failedDeletions) {
+      console.warn(`Left command for ${targetId} completed with ${deletionStats.skippedChannels} skipped channel(s) and ${deletionStats.failedDeletions} failed deletion(s).`);
+    }
   } catch (error) {
     deletionStats.skippedChannels++;
     console.error(`Could not scan the full 14-day message history for ${targetId}:`, error);
@@ -185,9 +181,7 @@ export async function handleLeftMessage(message) {
       reason: `${reason} | Unban failed: ${error.message}`,
     });
     console.error(`Prefix softban unban step failed for ${targetId}:`, error);
-    const response = { embeds: [createResponseEmbed('Unban failed', `${targetUser?.tag ?? targetId} was banned and ${deletionStats.deletedMessages} older message(s) were deleted, but I could not unban them. Check the server ban list.`, 'error')] };
-    if (statusMessage) await statusMessage.edit(response).catch(() => undefined);
-    else await message.channel.send(response);
+    await message.channel.send({ embeds: [createResponseEmbed('Unban failed', `${targetUser?.tag ?? targetId} was banned and their messages from the past 14 days were deleted, but I could not unban them. Check the server ban list.`, 'error')] });
     return;
   }
 
@@ -201,17 +195,9 @@ export async function handleLeftMessage(message) {
     targetLabel: targetUser?.username ?? `User ${targetId}`,
     reason,
   });
-  const channelSummary = deletionStats.skippedChannels
-    ? `\n⚠️ Could not scan ${deletionStats.skippedChannels} channel(s) because the bot lacked access or history could not be fetched.`
-    : '';
-  const deletionSummary = deletionStats.failedDeletions
-    ? `\n⚠️ ${deletionStats.failedDeletions} older message(s) could not be deleted.`
-    : '';
-  const response = {
-    content: `🔨 Banned \`${targetId}\` indefinitely\n\n🧹 Deleted **${deletionStats.deletedMessages}** older message(s) from the past 14 days across **${deletionStats.scannedChannels}** accessible channel(s). Discord’s ban step also removes messages from the most recent 7 days.${channelSummary}${deletionSummary}\n\n🔓 Unbanned \`${targetId}\``,
+  await message.channel.send({
+    content: `🔨 Banned \`${targetId}\` indefinitely\n\n🔓 Unbanned \`${targetId}\``,
     allowedMentions: { parse: [] },
-  };
-  if (statusMessage) await statusMessage.edit(response).catch(() => undefined);
-  else await message.channel.send(response);
+  });
 }
 
