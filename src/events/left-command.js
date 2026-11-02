@@ -2,9 +2,9 @@ import { PermissionFlagsBits } from 'discord.js';
 import { logModerationAction } from '../utils/log-moderation-action.js';
 import { parseUserId } from '../utils/parse-user-id.js';
 import { createResponseEmbed } from '../utils/response-embed.js';
+import { hasBanAndLeftCommandRole } from '../utils/command-role-access.js';
 
 const prefix = process.env.BOT_PREFIX ?? '=';
-const allowedRoleIds = ['852778343908900896', '852778216464973844'];
 const sevenDaysInSeconds = 7 * 24 * 60 * 60;
 
 export async function handleLeftMessage(message) {
@@ -13,7 +13,7 @@ export async function handleLeftMessage(message) {
   const [commandName, ...args] = message.content.slice(prefix.length).trim().split(/\s+/);
   if (commandName?.toLowerCase() !== 'left') return;
 
-  if (!allowedRoleIds.some((roleId) => message.member?.roles.cache.has(roleId))) {
+  if (!hasBanAndLeftCommandRole(message)) {
     await message.channel.send({ embeds: [createResponseEmbed('Permission required', 'You need an authorized role to use this softban command.', 'error')] });
     return;
   }
@@ -79,3 +79,4 @@ export async function handleLeftMessage(message) {
     allowedMentions: { parse: [] },
   });
 }
+
