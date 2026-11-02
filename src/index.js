@@ -7,6 +7,7 @@ import { handleAdWarningModalSubmit } from './commands/ad-warning-context.js';
 import { handleAdWarningRemoveMessage } from './commands/adwarningremove.js';
 import { handlePingMessage } from './commands/ping.js';
 import { handleAdMessage } from './events/message-create.js';
+import { handleAutomodMessage } from './events/automod.js';
 import { handleBanMessage } from './events/ban-command.js';
 import { handleKickMessage } from './events/kick-command.js';
 import { handleWarnMessage } from './events/warn-command.js';
@@ -137,6 +138,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
 client.on(Events.MessageCreate, async (message) => {
   try {
+    await handleAutomodMessage(message);
+  } catch (error) {
+    console.error('Automod message handler failed:', error);
+  }
+
+  try {
     await handlePingMessage(message);
   } catch (error) {
     console.error('Prefix ping command failed:', error);
@@ -246,3 +253,4 @@ client.login(process.env.DISCORD_TOKEN).catch((error) => {
   console.error('Unable to log in to Discord. Check DISCORD_TOKEN.', error);
   process.exitCode = 1;
 });
+
