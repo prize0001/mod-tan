@@ -86,13 +86,13 @@ export function addAdWarning({ guildId, userId, moderatorId, channelId, reason }
   });
 }
 
-export async function findAdWarning(value, guildId) {
+export async function findAdWarning(value, guildId = null) {
   await writeQueue;
   const code = normalizeAdWarningCode(value);
   if (!/^[a-z0-9]{6}$/.test(code)) return null;
 
   const warnings = await readWarnings();
-  return warnings.find((warning) => warning.code === code && warning.guildId === guildId) ?? null;
+  return warnings.find((warning) => warning.code === code && (guildId == null || warning.guildId === guildId)) ?? null;
 }
 
 export async function getAdWarningsForUser(guildId, userId) {
