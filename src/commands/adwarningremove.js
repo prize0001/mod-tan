@@ -69,7 +69,7 @@ export async function handleAdWarningRemoveMessage(message) {
   }
 
   await message.channel.send({
-    embeds: [createResponseEmbed('Warning removed', `Advertisement warning \`${warning.code}\` for <@${warning.userId}> was removed.`, 'success')],
+    embeds: [createResponseEmbed('Warning removed', `Advertisement warning \`${warning.code}\` for <@${warning.userId}> was removed from server \`${warning.guildId}\`.`, 'success')],
     allowedMentions: { parse: [] },
   });
 }
