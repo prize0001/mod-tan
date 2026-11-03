@@ -6,6 +6,13 @@ const storePath = process.env.AD_WARNING_STORE_PATH ?? join(process.cwd(), 'data
 const codeAlphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const warningBurstWindowMs = 30_000;
 const notificationCooldownMs = 15 * 60_000;
+const sharedAdWarningGuildIds = new Set([
+  '852771975730298880',
+  '771235990664118272',
+  '884251376157339718',
+  '1125688369037463573',
+  '1300686990848819240',
+]);
 let writeQueue = Promise.resolve();
 
 async function readWarnings() {
@@ -92,7 +99,7 @@ export async function findAdWarning(value, guildId = null) {
   if (!/^[a-z0-9]{6}$/.test(code)) return null;
 
   const warnings = await readWarnings();
-  return warnings.find((warning) => warning.code === code && (guildId == null || warning.guildId === guildId)) ?? null;
+  return warnings.find((warning) => warning.code === code && (guildId == null ? sharedAdWarningGuildIds.has(warning.guildId) : warning.guildId === guildId)) ?? null;
 }
 
 export async function getAdWarningsForUser(guildId, userId) {
@@ -103,12 +110,12 @@ export async function getAdWarningsForUser(guildId, userId) {
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
-export function removeAdWarning(value, guildId) {
+export function removeAdWarning(value, guildId = null) {
   const code = normalizeAdWarningCode(value);
   if (!/^[a-z0-9]{6}$/.test(code)) return Promise.resolve(null);
 
   return withWriteLock((warnings) => {
-    const index = warnings.findIndex((warning) => warning.code === code && warning.guildId === guildId);
+    const index = warnings.findIndex((warning) => warning.code === code && (guildId == null ? sharedAdWarningGuildIds.has(warning.guildId) : warning.guildId === guildId));
     if (index === -1) return null;
     return warnings.splice(index, 1)[0];
   });
