@@ -5,7 +5,7 @@ import { createResponseEmbed } from '../utils/response-embed.js';
 export default {
   data: new SlashCommandBuilder()
     .setName('adwarningremove')
-    .setDescription('Remove a saved advertisement warning by its code.')
+    .setDescription('Remove a warning by code from any configured server.')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .addStringOption((option) => option
       .setName('code')
@@ -21,16 +21,16 @@ export default {
     }
 
     const code = interaction.options.getString('code', true);
-    const warning = await removeAdWarning(code, interaction.guildId);
+    const warning = await removeAdWarning(code);
     if (!warning) {
       return interaction.reply({
-        embeds: [createResponseEmbed('Warning not found', 'No saved advertisement warning matches that code in this server.', 'error')],
+        embeds: [createResponseEmbed('Warning not found', 'No saved advertisement warning matches that code in the configured servers.', 'error')],
         ephemeral: true,
       });
     }
 
     return interaction.reply({
-      embeds: [createResponseEmbed('Warning removed', `Advertisement warning \`${warning.code}\` for <@${warning.userId}> was removed.`, 'success')],
+      embeds: [createResponseEmbed('Warning removed', `Advertisement warning \`${warning.code}\` for <@${warning.userId}> was removed from server \`${warning.guildId}\`.`, 'success')],
       ephemeral: true,
       allowedMentions: { parse: [] },
     });
@@ -60,10 +60,10 @@ export async function handleAdWarningRemoveMessage(message) {
     return;
   }
 
-  const warning = await removeAdWarning(codeInput, message.guildId);
+  const warning = await removeAdWarning(codeInput);
   if (!warning) {
     await message.channel.send({
-      embeds: [createResponseEmbed('Warning not found', 'No saved advertisement warning matches that code in this server.', 'error')],
+      embeds: [createResponseEmbed('Warning not found', 'No saved advertisement warning matches that code in the configured servers.', 'error')],
     });
     return;
   }
