@@ -4,8 +4,10 @@ import { dirname, join } from 'node:path';
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 import { createResponseEmbed } from '../utils/response-embed.js';
 
-const requiredGuildId = '852771975730298880';
-const requiredRoleId = '1115815957802258434';
+const requiredRoleByGuild = {
+  '852771975730298880': '1115815957802258434',
+  '771235990664118272': '785057888837042177',
+};
 const storePath = process.env.STICKY_AD_STORE_PATH ?? join(process.cwd(), 'data', 'sticky-ads.json');
 const hourMs = 60 * 60 * 1000;
 const dayMs = 24 * hourMs;
@@ -13,7 +15,7 @@ let writeQueue = Promise.resolve();
 let expiryTimer;
 const channelQueues = new Map();
 
-function hasRequiredRole(interaction) {
+function hasRequiredRole(interaction, requiredRoleId) {
   const roles = interaction.member?.roles;
   if (roles?.cache?.has) return roles.cache.has(requiredRoleId);
   if (Array.isArray(roles)) return roles.includes(requiredRoleId);
@@ -166,7 +168,7 @@ async function removeExpiredCampaigns(client, guildId) {
 }
 
 async function refreshStickyAds(message) {
-  if (message.author.bot || message.webhookId || !message.guild || message.guildId !== requiredGuildId) return;
+  if (message.author.bot || message.webhookId || !message.guild || !requiredRoleByGuild[message.guildId]) return;
   await removeExpiredCampaigns(message.client, message.guildId);
   const campaigns = Object.values(await getCampaigns()).filter((campaign) =>
     campaign.guildId === message.guildId
@@ -230,11 +232,12 @@ export default {
       .setDescription('Stop a sticky ad and delete its current posts.')
       .addStringOption((option) => option.setName('id').setDescription('Sticky-ad ID from /stickyad list').setMaxLength(20).setRequired(true))),
   async execute(interaction) {
-    if (!interaction.inGuild() || interaction.guildId !== requiredGuildId) {
-      return interaction.reply({ embeds: [createResponseEmbed('Server required', 'Sticky ads can only be managed in the configured server.', 'error')], ephemeral: true });
+    const requiredRoleId = requiredRoleByGuild[interaction.guildId];
+    if (!interaction.inGuild() || !requiredRoleId) {
+      return interaction.reply({ embeds: [createResponseEmbed('Server required', 'Sticky ads can only be managed in the configured servers.', 'error')], ephemeral: true });
     }
-    if (!hasRequiredRole(interaction)) {
-      return interaction.reply({ embeds: [createResponseEmbed('Role required', `Only members with role <@&${requiredRoleId}> can manage sticky ads.`, 'error')], allowedMentions: { parse: [] }, ephemeral: true });
+    if (!hasRequiredRole(interaction, requiredRoleId)) {
+      return interaction.reply({ embeds: [createResponseEmbed('Role required', `Only members with role <@&${requiredRoleId}> can manage sticky ads in this server.`, 'error')], allowedMentions: { parse: [] }, ephemeral: true });
     }
 
     const action = interaction.options.getSubcommand();
