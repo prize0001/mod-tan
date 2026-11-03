@@ -6,7 +6,7 @@ import { createResponseEmbed } from '../utils/response-embed.js';
 export default {
   data: new SlashCommandBuilder()
     .setName('adlookup')
-    .setDescription('Look up a saved advertisement warning by its code.')
+    .setDescription('Search all connected servers for a saved advertisement warning by code.')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .addStringOption((option) => option
       .setName('code')
@@ -22,7 +22,7 @@ export default {
     }
 
     const code = interaction.options.getString('code', true);
-    const warning = await findAdWarning(code, interaction.guildId);
+    const warning = await findAdWarning(code);
 
     if (!warning) {
       return interaction.reply({
@@ -31,8 +31,14 @@ export default {
       });
     }
 
+    const sourceServer = interaction.client.guilds.cache.get(warning.guildId)?.name ?? 'Unknown server';
+    const embed = createAdWarningEmbed(warning).addFields({
+      name: 'Server',
+      value: sourceServer + ' (' + warning.guildId + ')',
+    });
+
     return interaction.reply({
-      embeds: [createAdWarningEmbed(warning)],
+      embeds: [embed],
       allowedMentions: { parse: [] },
     });
   },
