@@ -6,7 +6,7 @@ import { createResponseEmbed } from '../utils/response-embed.js';
 export default {
   data: new SlashCommandBuilder()
     .setName('adlookup')
-    .setDescription('Search all connected servers for a saved advertisement warning by code.')
+    .setDescription('Search configured servers for a saved advertisement warning by code.')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .addStringOption((option) => option
       .setName('code')
