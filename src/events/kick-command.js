@@ -2,17 +2,16 @@ import { PermissionFlagsBits } from 'discord.js';
 import { logModerationAction } from '../utils/log-moderation-action.js';
 import { parseUserId } from '../utils/parse-user-id.js';
 import { createResponseEmbed } from '../utils/response-embed.js';
+import { hasStaffHubRole } from '../utils/command-role-access.js';
 
 const prefix = process.env.BOT_PREFIX ?? '=';
-const allowedRoleId = '852778343908900896';
-
 export async function handleKickMessage(message) {
   if (message.author.bot || !message.guild || !message.content.startsWith(prefix)) return;
 
   const [commandName, ...args] = message.content.slice(prefix.length).trim().split(/\s+/);
   if (commandName?.toLowerCase() !== 'kick') return;
 
-  if (!message.member?.roles.cache.has(allowedRoleId)) {
+  if (!(await hasStaffHubRole(message.client, message.author.id, 'moderation'))) {
     await message.channel.send({ embeds: [createResponseEmbed('Permission required', 'You need the authorized role to use this kick command.', 'error')] });
     return;
   }
