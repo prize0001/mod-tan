@@ -1,16 +1,21 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { logModerationAction } from '../utils/log-moderation-action.js';
 import { parseUserId } from '../utils/parse-user-id.js';
 import { createResponseEmbed } from '../utils/response-embed.js';
+import { hasStaffHubRole } from '../utils/command-role-access.js';
 
 export default {
   data: new SlashCommandBuilder()
     .setName('clear')
     .setDescription('Delete recent messages in this channel.')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
+    .setDefaultMemberPermissions(null)
     .addIntegerOption((option) => option.setName('amount').setDescription('Number of messages to delete (1 to 100)').setMinValue(1).setMaxValue(100).setRequired(true))
     .addStringOption((option) => option.setName('user').setDescription('Optional user ID or mention to filter messages').setRequired(false)),
   async execute(interaction) {
+    if (!interaction.inGuild() || !(await hasStaffHubRole(interaction.client, interaction.user.id, 'banLeft'))) {
+      return interaction.reply({ embeds: [createResponseEmbed('Permission required', 'You need an authorized Staff Hub role to use this command.', 'error')], ephemeral: true });
+    }
+
     const amount = interaction.options.getInteger('amount', true);
     const userInput = interaction.options.getString('user');
     const targetUserId = userInput ? parseUserId(userInput) : null;
