@@ -7,15 +7,7 @@ import {
   removeAutoAd,
 } from '../utils/auto-ad-scheduler.js';
 import { createResponseEmbed } from '../utils/response-embed.js';
-
-const requiredAutoAdRoleId = '1115815957802258434';
-
-function hasAutoAdRole(interaction) {
-  const roles = interaction.member?.roles;
-  if (roles?.cache?.has) return roles.cache.has(requiredAutoAdRoleId);
-  if (Array.isArray(roles)) return roles.includes(requiredAutoAdRoleId);
-  return false;
-}
+import { hasStaffHubRole } from '../utils/command-role-access.js';
 
 function parseDuration(value) {
   const match = value.trim().toLowerCase().match(/^(\d+)\s*(m|minutes?|h|hours?|d|days?)$/);
@@ -87,9 +79,9 @@ export default {
       });
     }
 
-    if (!hasAutoAdRole(interaction)) {
+    if (!(await hasStaffHubRole(interaction.client, interaction.user.id, 'stickyAutoAds'))) {
       return interaction.reply({
-        embeds: [createResponseEmbed('Role required', `Only members with role <@&${requiredAutoAdRoleId}> can manage auto ads.`, 'error')],
+        embeds: [createResponseEmbed('Role required', `Only members with the authorized Staff Hub role can manage auto ads.`, 'error')],
         allowedMentions: { parse: [] },
         ephemeral: true,
       });
