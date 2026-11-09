@@ -1,27 +1,35 @@
-const requiredRoleByGuild = {
-  '852771975730298880': '852778233275613235',
-  '771235990664118272': '771747709170352139',
+const STAFF_HUB_GUILD_ID = '884251376157339718';
+
+const roleIdsByGroup = {
+  banLeft: [
+    '884251376232841259',
+    '1425526085193306232',
+    '1425526106445975664',
+    '884251376274767891',
+  ],
+  moderation: ['884251376232841261', '884251376274767891'],
+  warnings: ['884251376232841261', '884251376274767891'],
+  adWarnings: ['884251376232841261', '884251376274767891'],
+  timeout: ['884251376232841261', '884251376274767891'],
+  bump: ['884251376232841261', '884251376274767891'],
+  stickyAutoAds: ['884251376274767891'],
+  manualAds: ['884251376274767891'],
 };
 
-const banAndLeftRolesByGuild = {
-  '852771975730298880': ['852778343908900896', '852778216464973844'],
-  '771235990664118272': ['785057888837042177', '1417367238108905582', '775645444243062804'],
-};
+export async function hasStaffHubRole(client, userId, group) {
+  const roleIds = roleIdsByGroup[group];
+  if (!client || !userId || !Array.isArray(roleIds) || roleIds.length === 0) return false;
 
-export function hasRequiredCommandRole({ guildId, member }) {
-  const requiredRoleId = requiredRoleByGuild[guildId];
-  if (!requiredRoleId) return true;
-  const roles = member?.roles;
-  if (roles?.cache?.has) return roles.cache.has(requiredRoleId);
-  if (Array.isArray(roles)) return roles.includes(requiredRoleId);
-  return false;
+  let staffHub = client.guilds.cache.get(STAFF_HUB_GUILD_ID);
+  if (!staffHub) {
+    staffHub = await client.guilds.fetch(STAFF_HUB_GUILD_ID).catch((error) => {
+      console.error('Could not access the Staff Hub for command role checks:', error);
+      return null;
+    });
+  }
+  if (!staffHub) return false;
+
+  const member = await staffHub.members.fetch(userId).catch(() => null);
+  if (!member) return false;
+  return roleIds.some((roleId) => member.roles.cache.has(roleId));
 }
-
-export function hasBanAndLeftCommandRole({ guildId, member }) {
-  const allowedRoleIds = banAndLeftRolesByGuild[guildId] ?? [];
-  const roles = member?.roles;
-  if (roles?.cache?.has) return allowedRoleIds.some((roleId) => roles.cache.has(roleId));
-  if (Array.isArray(roles)) return allowedRoleIds.some((roleId) => roles.includes(roleId));
-  return false;
-}
-
