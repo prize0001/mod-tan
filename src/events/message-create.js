@@ -1,7 +1,7 @@
 
 import { PermissionFlagsBits } from 'discord.js';
 import { issueAdWarning } from '../utils/issue-ad-warning.js';
-import { hasRequiredCommandRole } from '../utils/command-role-access.js';
+import { hasStaffHubRole } from '../utils/command-role-access.js';
 
 const prefix = process.env.BOT_PREFIX ?? '=';
 
@@ -11,12 +11,10 @@ export async function handleAdMessage(message) {
   const [commandName, ...argumentsList] = message.content.slice(prefix.length).trim().split(/\s+/);
   if (commandName?.toLowerCase() !== 'ad') return;
 
-  if (!hasRequiredCommandRole(message)) {
+  if (!(await hasStaffHubRole(message.client, message.author.id, 'adWarnings'))) {
     await message.channel.send('You need the authorized role to use the ad-deletion command.');
     return;
   }
-
-  if (!message.member.permissions.has(PermissionFlagsBits.ManageMessages)) return;
 
   const advertisement = message.reference?.messageId
     ? await message.fetchReference().catch(() => null)
