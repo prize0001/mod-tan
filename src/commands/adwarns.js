@@ -1,20 +1,21 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { getAdWarningsForUser } from '../store/ad-warnings.js';
 import { buildAdWarningHistoryEmbeds } from '../utils/ad-warning-history.js';
+import { hasStaffHubRole } from '../utils/command-role-access.js';
 
 export default {
   data: new SlashCommandBuilder()
     .setName('adwarns')
     .setDescription('Show a user’s saved ad-warning codes and reasons.')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
+    .setDefaultMemberPermissions(null)
     .addUserOption((option) => option
       .setName('user')
       .setDescription('User whose ad warnings to show')
       .setRequired(true)),
   async execute(interaction) {
-    if (!interaction.inGuild() || !interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages)) {
+    if (!interaction.inGuild() || !(await hasStaffHubRole(interaction.client, interaction.user.id, 'adWarnings'))) {
       return interaction.reply({
-        content: 'You need Manage Messages permission to look up ad warnings.',
+        content: 'You need an authorized Staff Hub role to look up ad warnings.',
         ephemeral: true,
       });
     }
