@@ -1,13 +1,14 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { logModerationAction } from '../utils/log-moderation-action.js';
 import { parseUserId } from '../utils/parse-user-id.js';
 import { createResponseEmbed } from '../utils/response-embed.js';
+import { hasStaffHubRole } from '../utils/command-role-access.js';
 
 export default {
   data: new SlashCommandBuilder()
     .setName('warn')
     .setDescription('Issue a warning to a server member by DM.')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+    .setDefaultMemberPermissions(null)
     .addStringOption((option) => option
       .setName('user')
       .setDescription('User ID or mention')
@@ -18,6 +19,10 @@ export default {
       .setMaxLength(400)
       .setRequired(true)),
   async execute(interaction) {
+    if (!interaction.inGuild() || !(await hasStaffHubRole(interaction.client, interaction.user.id, 'warnings'))) {
+      return interaction.reply({ embeds: [createResponseEmbed('Permission required', 'You need an authorized Staff Hub role to use this command.', 'error')], ephemeral: true });
+    }
+
     const userId = parseUserId(interaction.options.getString('user', true));
     if (!userId) {
       return interaction.reply({
