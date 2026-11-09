@@ -1,6 +1,7 @@
 import { EmbedBuilder } from 'discord.js';
 import { addAdDeletions, getAdDeletionStats } from '../store/ad-deletions.js';
 import { parseUserId } from '../utils/parse-user-id.js';
+import { hasStaffHubRole } from '../utils/command-role-access.js';
 
 const prefix = process.env.BOT_PREFIX ?? '=';
 const alternateBrandGuildId = '771235990664118272';
@@ -12,8 +13,8 @@ export async function handleAdDeletionStatsMessage(message) {
   const command = commandName?.toLowerCase();
 
   if (command === 'warnsad') {
-    if (message.author.id !== '749008764300165192') {
-      await message.channel.send('Only the authorized account can add ad-deletion stats.');
+    if (!(await hasStaffHubRole(message.client, message.author.id, 'manualAds'))) {
+      await message.channel.send('You need the authorized Staff Hub role to add ad-deletion stats.');
       return;
     }
 
