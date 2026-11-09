@@ -1,7 +1,7 @@
-import { PermissionFlagsBits } from 'discord.js';
 import { getAdWarningsForUser } from '../store/ad-warnings.js';
 import { parseUserId } from '../utils/parse-user-id.js';
 import { sendAdWarningHistory } from '../utils/ad-warning-history.js';
+import { hasStaffHubRole } from '../utils/command-role-access.js';
 
 const prefix = process.env.BOT_PREFIX ?? '=';
 
@@ -11,8 +11,8 @@ export async function handleAdWarnsMessage(message) {
   const [commandName, userInput] = message.content.slice(prefix.length).trim().split(/\s+/);
   if (commandName?.toLowerCase() !== 'adwarns') return;
 
-  if (!message.member?.permissions.has(PermissionFlagsBits.ManageMessages)) {
-    await message.channel.send('You need Manage Messages permission to look up ad warnings.');
+  if (!(await hasStaffHubRole(message.client, message.author.id, 'adWarnings'))) {
+    await message.channel.send('You need an authorized Staff Hub role to look up ad warnings.');
     return;
   }
 
