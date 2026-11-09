@@ -1,21 +1,22 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { removeAdWarning } from '../store/ad-warnings.js';
 import { createResponseEmbed } from '../utils/response-embed.js';
+import { hasStaffHubRole } from '../utils/command-role-access.js';
 
 export default {
   data: new SlashCommandBuilder()
     .setName('adwarningremove')
     .setDescription('Remove a warning by code from any configured server.')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
+    .setDefaultMemberPermissions(null)
     .addStringOption((option) => option
       .setName('code')
       .setDescription('Warning code, for example cs78gf or adwarn cs78gf')
       .setMaxLength(40)
       .setRequired(true)),
   async execute(interaction) {
-    if (!interaction.inGuild() || !interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages)) {
+    if (!interaction.inGuild() || !(await hasStaffHubRole(interaction.client, interaction.user.id, 'adWarnings'))) {
       return interaction.reply({
-        embeds: [createResponseEmbed('Permission required', 'You need Manage Messages permission to remove advertisement warnings.', 'error')],
+        embeds: [createResponseEmbed('Permission required', 'You need an authorized Staff Hub role to remove advertisement warnings.', 'error')],
         ephemeral: true,
       });
     }
@@ -45,7 +46,7 @@ export async function handleAdWarningRemoveMessage(message) {
   const [commandName, ...args] = message.content.slice(prefix.length).trim().split(/\s+/);
   if (commandName?.toLowerCase() !== 'adwarningremove') return;
 
-  if (!message.member?.permissions.has(PermissionFlagsBits.ManageMessages)) {
+  if (!(await hasStaffHubRole(message.client, message.author.id, 'adWarnings'))) {
     await message.channel.send({
       embeds: [createResponseEmbed('Permission required', 'You need Manage Messages permission to remove advertisement warnings.', 'error')],
     });
