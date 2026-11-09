@@ -1,11 +1,10 @@
 import { EmbedBuilder } from 'discord.js';
 import { addBumps, getBumpStats, recordBump } from '../store/bumps.js';
-import { hasRequiredCommandRole } from '../utils/command-role-access.js';
+import { hasStaffHubRole } from '../utils/command-role-access.js';
 import { parseUserId } from '../utils/parse-user-id.js';
 
 const prefix = process.env.BOT_PREFIX ?? '=';
 const alternateBrandGuildId = '771235990664118272';
-const manualBumpUserId = '749008764300165192';
 
 export async function handleBumpMessage(message) {
   if (message.author.bot || !message.guild || !message.content.startsWith(prefix)) return;
@@ -14,8 +13,8 @@ export async function handleBumpMessage(message) {
   const command = commandName?.toLowerCase();
 
   if (command === 'bumpsadd') {
-    if (message.author.id !== manualBumpUserId) {
-      await message.channel.send('Only the authorized account can manually add bump stats.');
+    if (!(await hasStaffHubRole(message.client, message.author.id, 'bump'))) {
+      await message.channel.send('You need an authorized Staff Hub role to manually add bump stats.');
       return;
     }
 
@@ -32,7 +31,7 @@ export async function handleBumpMessage(message) {
   }
 
   if (command === 'bump') {
-    if (!hasRequiredCommandRole(message)) {
+    if (!(await hasStaffHubRole(message.client, message.author.id, 'bump'))) {
       await message.channel.send('You need the authorized role to use the bump command.');
       return;
     }
