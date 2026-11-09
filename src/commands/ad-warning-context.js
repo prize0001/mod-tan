@@ -3,30 +3,22 @@ import {
   ApplicationCommandType,
   ContextMenuCommandBuilder,
   ModalBuilder,
-  PermissionFlagsBits,
   TextInputBuilder,
   TextInputStyle,
 } from 'discord.js';
 import { issueAdWarning } from '../utils/issue-ad-warning.js';
 import { createResponseEmbed } from '../utils/response-embed.js';
-import { hasRequiredCommandRole } from '../utils/command-role-access.js';
+import { hasStaffHubRole } from '../utils/command-role-access.js';
 
 export default {
   data: new ContextMenuCommandBuilder()
     .setName('Ad Warning')
     .setType(ApplicationCommandType.Message)
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+    .setDefaultMemberPermissions(null),
   async execute(interaction) {
-    if (!interaction.inGuild() || !interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages)) {
+    if (!interaction.inGuild() || !(await hasStaffHubRole(interaction.client, interaction.user.id, 'adWarnings'))) {
       return interaction.reply({
-        embeds: [createResponseEmbed('Permission required', 'You need Manage Messages permission to issue an advertisement warning.', 'error')],
-        ephemeral: true,
-      });
-    }
-
-    if (!hasRequiredCommandRole(interaction)) {
-      return interaction.reply({
-        embeds: [createResponseEmbed('Permission required', 'You need the authorized role to delete advertisements in this server.', 'error')],
+        embeds: [createResponseEmbed('Permission required', 'You need the authorized Staff Hub role to issue an advertisement warning.', 'error')],
         ephemeral: true,
       });
     }
@@ -53,8 +45,7 @@ export async function handleAdWarningModalSubmit(interaction) {
   if (!interaction.inGuild()
     || interaction.user.id !== moderatorId
     || interaction.guildId !== guildId
-    || !interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages)
-    || !hasRequiredCommandRole(interaction)) {
+    || !(await hasStaffHubRole(interaction.client, interaction.user.id, 'adWarnings'))) {
     return interaction.reply({
       embeds: [createResponseEmbed('Permission required', 'This warning form is no longer valid for your account or server.', 'error')],
       ephemeral: true,
