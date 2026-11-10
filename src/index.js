@@ -17,6 +17,7 @@ import { handleLeftMessage } from './events/left-command.js';
 import { handleBumpMessage } from './events/bump-command.js';
 import { handleAdCounterMessage } from './events/ad-counter.js';
 import { handleAdDeletionStatsMessage } from './events/ad-deletion-stats.js';
+import { handleMessageStatsMessage } from './events/message-stats.js';
 import { handleAdWarnsMessage } from './events/ad-warns-command.js';
 import { startAutoAdScheduler } from './utils/auto-ad-scheduler.js';
 import { createResponseEmbed } from './utils/response-embed.js';
@@ -137,6 +138,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
 });
 
 client.on(Events.MessageCreate, async (message) => {
+  try {
+    await handleMessageStatsMessage(message);
+  } catch (error) {
+    console.error('Message stats handler failed:', error);
+    if (isPrefixCommand(message, ['messages'])) {
+      await message.channel.send({
+        embeds: [createResponseEmbed('Message stats unavailable', 'I could not read or save message stats. Check the bot console for the storage error.', 'error')],
+      }).catch(console.error);
+    }
+  }
+
   try {
     await handleAutomodMessage(message);
   } catch (error) {
