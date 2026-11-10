@@ -15,10 +15,10 @@ export async function handleMessageStatsMessage(message) {
   if (!message.guild || message.author.bot || message.webhookId) return;
 
   if (message.content.startsWith(prefix)) {
-    const [commandName, ...args] = message.content.slice(prefix.length).trim().split(/\\s+/);
+    const [commandName, ...args] = message.content.slice(prefix.length).trim().split(/\s+/);
     if (commandName?.toLowerCase() === 'messages') {
       if (message.guildId !== targetGuildId) {
-        await message.channel.send('The `=messages` command is only available in the configured AYS server.');
+        await message.channel.send('The =messages command is only available in the configured AYS server.');
         return;
       }
 
@@ -39,13 +39,13 @@ export async function handleMessageStatsMessage(message) {
         .setColor(0x269EC1)
         .setTitle('AYS Message Stats')
         .setDescription([
-          '**User:** <@' + userId + '> (`' + userId + '`)',
+          '**User:** <@' + userId + '> (' + userId + ')',
           '',
-          '**This Week (' + formatWeek(stats.weekKeys.thisWeek) + '):** `' + stats.thisWeek + '`',
-          '**Last Week (' + formatWeek(stats.weekKeys.lastWeek) + '):** `' + stats.lastWeek + '`',
+          '**This Week (' + formatWeek(stats.weekKeys.thisWeek) + '):** **' + stats.thisWeek + '**',
+          '**Last Week (' + formatWeek(stats.weekKeys.lastWeek) + '):** **' + stats.lastWeek + '**',
           '**Trend:** ' + trend,
           '**Weekly Rank:** ' + rank,
-        ].join('\\n'));
+        ].join('\n'));
 
       await message.channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
       return;
